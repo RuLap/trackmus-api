@@ -1,6 +1,6 @@
 -- +goose Up
 -- +goose StatementBegin
-CREATE TABLE IF NOT EXISTS medias (
+CREATE TABLE IF NOT EXISTS "sessions" (
     "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     "task_id" UUID REFERENCES tasks(id) ON DELETE CASCADE,
     "bpm" VARCHAR(50),
@@ -14,5 +14,5 @@ CREATE TABLE IF NOT EXISTS medias (
 
 -- +goose Down
 -- +goose StatementBegin
-SELECT 'down SQL query';
+DROP TABLE IF EXISTS "sessions";
 -- +goose StatementEnd
