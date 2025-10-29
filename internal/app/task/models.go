@@ -1,6 +1,8 @@
 package task
 
 import (
+	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -23,11 +25,12 @@ const (
 )
 
 type Task struct {
-	ID        uuid.UUID `db:"id"`
-	UserID    uuid.UUID `db:"user_id"`
-	Title     string    `db:"title"`
-	TargetBPM int       `db:"target_bpm"`
-	CreatedAt time.Time `db:"created_at"`
+	ID          uuid.UUID `db:"id"`
+	UserID      uuid.UUID `db:"user_id"`
+	Title       string    `db:"title"`
+	TargetBPM   int       `db:"target_bpm"`
+	IsCompleted bool      `db:"is_completed"`
+	CreatedAt   time.Time `db:"created_at"`
 }
 
 type Session struct {
@@ -60,6 +63,10 @@ type Link struct {
 	CreatedAt time.Time `db:"created_at"`
 }
 
+func (s *Session) GetDurationSeconds() int {
+	return int(s.EndTime.Sub(s.StartTime).Seconds())
+}
+
 func (mt MediaType) IsValid() bool {
 	switch mt {
 	case MediaTypeVideo, MediaTypeAudio, MediaTypeImage:
@@ -76,4 +83,34 @@ func (lt LinkType) IsValid() bool {
 	}
 
 	return false
+}
+
+func (mt *MediaType) UnmarshalJSON(data []byte) error {
+	var s string
+	if err := json.Unmarshal(data, &s); err != nil {
+		return err
+	}
+
+	mediaType := MediaType(s)
+	if !mediaType.IsValid() {
+		return fmt.Errorf("invalid media type: %s", s)
+	}
+
+	*mt = mediaType
+	return nil
+}
+
+func (mt *LinkType) UnmarshalJSON(data []byte) error {
+	var s string
+	if err := json.Unmarshal(data, &s); err != nil {
+		return err
+	}
+
+	linkType := LinkType(s)
+	if !linkType.IsValid() {
+		return fmt.Errorf("invalid link type: %s", s)
+	}
+
+	*mt = linkType
+	return nil
 }

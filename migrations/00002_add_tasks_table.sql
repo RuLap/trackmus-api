@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS "tasks" (
     "user_id" UUID REFERENCES users(id) ON DELETE CASCADE,
     "title" VARCHAR(50),
     "target_bpm" INT,
+    "is_completed" BOOLEAN DEFAULT FALSE,
     "created_at" TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
 );
 -- +goose StatementEnd
