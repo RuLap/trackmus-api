@@ -38,9 +38,16 @@ func (r *sessionRepository) GetByTaskID(ctx context.Context, taskID uuid.UUID) (
 	sessions := make([]Session, 0)
 	for rows.Next() {
 		var session Session
-		err := rows.Scan()
+		err := rows.Scan(
+			&session.ID,
+			&session.BPM,
+			&session.Note,
+			&session.Confidence,
+			&session.StartTime,
+			&session.EndTime,
+		)
 		if err != nil {
-			return nil, fmt.Errorf("failed to scan task: %w", err)
+			return nil, fmt.Errorf("failed to scan session: %w", err)
 		}
 
 		sessions = append(sessions, session)
@@ -70,7 +77,7 @@ func (r *sessionRepository) GetByID(ctx context.Context, id uuid.UUID) (*Session
 		&session.EndTime,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to scan task: %w", err)
+		return nil, fmt.Errorf("failed to scan session: %w", err)
 	}
 
 	return &session, nil
@@ -96,7 +103,7 @@ func (r *sessionRepository) Create(ctx context.Context, session *Session) (*Sess
 		&id,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create task: %w", err)
+		return nil, fmt.Errorf("failed to create session: %w", err)
 	}
 
 	session.ID = id
