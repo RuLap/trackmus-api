@@ -7,6 +7,7 @@ import (
 
 	"github.com/RuLap/trackmus-api/internal/app/auth"
 	mail_services "github.com/RuLap/trackmus-api/internal/app/mail/services"
+	"github.com/RuLap/trackmus-api/internal/app/task"
 	"github.com/RuLap/trackmus-api/internal/pkg/config"
 	"github.com/RuLap/trackmus-api/internal/pkg/http"
 	"github.com/RuLap/trackmus-api/internal/pkg/jwthelper"
@@ -57,6 +58,7 @@ func main() {
 	//Modules----------------------------------------------------------------------------------------------------------
 
 	authModule := auth.NewModule(logger, storage.Database(), jwtHelper, &cfg.GoogleOAuth, redisClient, rabbitmqClient)
+	taskModule := task.NewModule(logger, storage.Database(), redisClient, rabbitmqClient)
 
 	var mailService *mail_services.MailService
 	if rabbitmqClient != nil {
@@ -104,6 +106,38 @@ func main() {
 		})
 
 		r.With(middleware.AuthMiddleware(jwtHelper)).Post("/logout", authModule.Handler.Logout)
+	})
+
+	router.Route("/tasks", func(r chi.Router) {
+		r.Use(middleware.AuthMiddleware(jwtHelper))
+
+		r.Get("/active", taskModule.Handler.GetActiveTasks)
+		r.Get("/completed", taskModule.Handler.GetCompletedTasks)
+		r.Get("/{id}", taskModule.Handler.GetTaskByID)
+		r.Post("/", taskModule.Handler.CreateTask)
+		r.Put("/", taskModule.Handler.UpdateTask)
+		r.Put("{id}/complete", taskModule.Handler.CompleteTask)
+	})
+
+	router.Route("/sessions", func(r chi.Router) {
+		r.Use(middleware.AuthMiddleware(jwtHelper))
+
+		r.Get("/{id}", taskModule.Handler.GetSessionByID)
+		r.Post("/", taskModule.Handler.CreateSession)
+	})
+
+	router.Route("/media", func(r chi.Router) {
+		r.Use(middleware.AuthMiddleware(jwtHelper))
+
+		r.Post("/", taskModule.Handler.UploadMedia)
+		r.Delete("/", taskModule.Handler.RemoveMedia)
+	})
+
+	router.Route("/links", func(r chi.Router) {
+		r.Use(middleware.AuthMiddleware(jwtHelper))
+
+		r.Post("/", taskModule.Handler.CreateLink)
+		r.Delete("/", taskModule.Handler.RemoveLink)
 	})
 
 	//Server-----------------------------------------------------------------------------------------------------------
