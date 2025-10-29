@@ -57,11 +57,11 @@ type GetMediaResponse struct {
 }
 
 type SaveMediaRequest struct {
-	Type     string `json:"type" validate:"required"`
-	Filename string `json:"filename" validate:"required,min=1"`
-	URL      string `json:"url" validate:"required,url"`
-	Size     int64  `json:"size" validate:"required,number"`
-	Duration int    `json:"duration" validate:"required,number"`
+	Type     MediaType `json:"type" validate:"required"`
+	Filename string    `json:"filename" validate:"required,min=1"`
+	URL      string    `json:"url" validate:"required,url"`
+	Size     int64     `json:"size" validate:"required,number"`
+	Duration int       `json:"duration" validate:"required,number"`
 }
 
 // Link -------------------------------------------------------------------------------------
@@ -74,7 +74,7 @@ type GetLinkResponse struct {
 }
 
 type SaveLinkRequest struct {
-	URL   string `json:"url" validate:"required,url"`
-	Title string `json:"title" validate:"required,min=1,max=50"`
-	Type  string `json:"type" validate:"required,min=1,max=50"`
+	URL   string   `json:"url" validate:"required,url"`
+	Title string   `json:"title" validate:"required,min=1,max=50"`
+	Type  LinkType `json:"type" validate:"required,min=1,max=50"`
 }
