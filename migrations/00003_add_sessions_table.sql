@@ -3,7 +3,7 @@
 CREATE TABLE IF NOT EXISTS "sessions" (
     "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     "task_id" UUID REFERENCES tasks(id) ON DELETE CASCADE,
-    "bpm" VARCHAR(50),
+    "bpm" INT,
     "note" TEXT,
     "confidence" INT,
     "start_time" TIMESTAMP WITH TIME ZONE,
