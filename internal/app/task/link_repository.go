@@ -41,7 +41,6 @@ func (r *linkRepository) GetByTaskID(ctx context.Context, taskID uuid.UUID) ([]L
 		err := rows.Scan(
 			&link.ID,
 			&link.TaskID,
-			&link.URL,
 			&link.Title,
 			&link.Type,
 			&link.CreatedAt,
@@ -68,7 +67,6 @@ func (r *linkRepository) Create(ctx context.Context, model *Link) (*Link, error)
 		ctx,
 		query,
 		model.TaskID,
-		model.URL,
 		model.Title,
 		model.Type,
 	).Scan(

@@ -13,8 +13,8 @@ func TaskToGetShortResponse(model *Task, progress float64) GetTaskShortResponse 
 	}
 }
 
-func TaskToGetResponse(model *Task, sessions []GetSessionResponse, media []GetMediaResponse, links []GetLinkResponse) *GetTaskResponse {
-	return &GetTaskResponse{
+func TaskToGetResponse(model *Task, sessions []GetSessionResponse, media []GetMediaResponse, links []GetLinkResponse) GetTaskResponse {
+	return GetTaskResponse{
 		ID:        model.ID.String(),
 		Title:     model.Title,
 		TargetBPM: model.TargetBPM,
@@ -24,9 +24,9 @@ func TaskToGetResponse(model *Task, sessions []GetSessionResponse, media []GetMe
 	}
 }
 
-func SaveRequestToTask(req *SaveTaskRequest, userID uuid.UUID) Task {
+func SaveRequestToTask(req *SaveTaskRequest, id uuid.UUID) Task {
 	return Task{
-		UserID:    userID,
+		ID:        id,
 		Title:     req.Title,
 		TargetBPM: req.TargetBPM,
 	}
@@ -46,8 +46,9 @@ func SessionToGetResponse(model *Session) GetSessionResponse {
 	}
 }
 
-func SaveRequestToSession(req *SaveSessionRequest, userID uuid.UUID) Session {
+func SaveRequestToSession(req *SaveSessionRequest, taskID uuid.UUID) Session {
 	return Session{
+		TaskID:     taskID,
 		BPM:        req.BPM,
 		Note:       req.Note,
 		Confidence: req.Confidence,
@@ -58,12 +59,12 @@ func SaveRequestToSession(req *SaveSessionRequest, userID uuid.UUID) Session {
 
 // Media -------------------------------------------------------------------------------------
 
-func MediaToGetResponse(model *Media) GetMediaResponse {
+func MediaToGetResponse(model *Media, url string) GetMediaResponse {
 	return GetMediaResponse{
 		ID:        model.ID.String(),
 		Type:      string(model.Type),
 		Filename:  model.Filename,
-		URL:       model.URL,
+		URL:       url,
 		Size:      model.Size,
 		Duration:  model.Duration,
 		CreatedAt: model.CreatedAt,
@@ -72,9 +73,9 @@ func MediaToGetResponse(model *Media) GetMediaResponse {
 
 func SaveRequestToMedia(req *SaveMediaRequest, taskID uuid.UUID) Media {
 	return Media{
+		TaskID:   taskID,
 		Type:     MediaType(req.Type),
 		Filename: req.Filename,
-		URL:      req.URL,
 		Size:     req.Size,
 		Duration: req.Duration,
 	}
@@ -85,7 +86,6 @@ func SaveRequestToMedia(req *SaveMediaRequest, taskID uuid.UUID) Media {
 func LinkToGetResponse(model *Link) GetLinkResponse {
 	return GetLinkResponse{
 		ID:        model.ID.String(),
-		URL:       model.URL,
 		Title:     model.Title,
 		Type:      string(model.Type),
 		CreatedAt: model.CreatedAt,
@@ -94,8 +94,8 @@ func LinkToGetResponse(model *Link) GetLinkResponse {
 
 func SaveRequestToLink(req *SaveLinkRequest, taskID uuid.UUID) Link {
 	return Link{
-		URL:   req.URL,
-		Title: req.Title,
-		Type:  req.Type,
+		TaskID: taskID,
+		Title:  req.Title,
+		Type:   req.Type,
 	}
 }

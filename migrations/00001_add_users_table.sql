@@ -10,7 +10,6 @@ CREATE TABLE IF NOT EXISTS "sessions" (
     "first_name" VARCHAR(50),
     "last_name" VARCHAR(50),
     "username" VARCHAR(50) UNIQUE,
-    "avatar_url" TEXT NULL,
     "created_at" TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 -- +goose StatementEnd

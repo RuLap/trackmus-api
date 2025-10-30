@@ -42,7 +42,6 @@ func (r *mediaRepository) GetByTaskID(ctx context.Context, taskID uuid.UUID) ([]
 			&media.ID,
 			&media.Type,
 			&media.Filename,
-			&media.URL,
 			&media.Size,
 			&media.Duration,
 			&media.CreatedAt,
@@ -70,7 +69,6 @@ func (r *mediaRepository) Create(ctx context.Context, model *Media) (*Media, err
 		query,
 		model.Type,
 		model.Filename,
-		model.URL,
 		model.Size,
 		model.Duration,
 	).Scan(

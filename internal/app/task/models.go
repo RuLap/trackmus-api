@@ -48,7 +48,6 @@ type Media struct {
 	TaskID    uuid.UUID `db:"task_id"`
 	Type      MediaType `db:"type"`
 	Filename  string    `db:"filename"`
-	URL       string    `db:"url"`
 	Size      int64     `db:"size"`
 	Duration  int       `db:"duration"`
 	CreatedAt time.Time `db:"created_at"`
@@ -57,7 +56,6 @@ type Media struct {
 type Link struct {
 	ID        uuid.UUID `db:"id"`
 	TaskID    uuid.UUID `db:"task_id"`
-	URL       string    `db:"url"`
 	Title     string    `db:"title"`
 	Type      LinkType  `db:"type"`
 	CreatedAt time.Time `db:"created_at"`
