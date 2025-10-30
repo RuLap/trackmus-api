@@ -5,7 +5,6 @@ CREATE TABLE IF NOT EXISTS "medias" (
     "task_id" UUID REFERENCES tasks(id) ON DELETE CASCADE,
     "type" VARCHAR(50),
     "filename" TEXT,
-    "url" TEXT,
     "size" INT,
     "duration" INT,
     "created_at" TIMESTAMP WITH TIME ZONE DEFAULT NOW()
