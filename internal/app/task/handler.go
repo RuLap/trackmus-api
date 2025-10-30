@@ -132,13 +132,13 @@ func (h *Handler) CompleteTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.service.CompleteTask(r.Context(), *id)
+	response, err := h.service.CompleteTask(r.Context(), *id)
 	if err != nil {
 		boom.Internal(w, err)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
+	h.sendJSON(w, response, http.StatusOK)
 }
 
 func (h *Handler) GetSessionByID(w http.ResponseWriter, r *http.Request) {
