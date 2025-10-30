@@ -71,10 +71,10 @@ func MediaToGetResponse(model *Media, url string) GetMediaResponse {
 	}
 }
 
-func SaveRequestToMedia(req *SaveMediaRequest, taskID uuid.UUID) Media {
+func ConfirmUploadRequestToMedia(req *ConfirmMediaUploadRequest, id uuid.UUID) Media {
 	return Media{
-		TaskID:   taskID,
-		Type:     MediaType(req.Type),
+		ID:       id,
+		Type:     req.Type,
 		Filename: req.Filename,
 		Size:     req.Size,
 		Duration: req.Duration,

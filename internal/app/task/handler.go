@@ -184,14 +184,32 @@ func (h *Handler) CreateSession(w http.ResponseWriter, r *http.Request) {
 	h.sendJSON(w, response, http.StatusOK)
 }
 
-func (h *Handler) UploadMedia(w http.ResponseWriter, r *http.Request) {
-	taskID, err := h.getUrlParamUuid(r, "id")
+func (h *Handler) GetMediaUploadURL(w http.ResponseWriter, r *http.Request) {
+	taskID, err := h.getUrlParamUuid(r, "task_id")
 	if err != nil {
 		boom.BadRequest(w, err)
 		return
 	}
 
-	var req SaveMediaRequest
+	mediaID := uuid.New()
+
+	response, err := h.service.GetMediaUploadURL(r.Context(), *taskID, mediaID)
+	if err != nil {
+		boom.Internal(w, err)
+		return
+	}
+
+	h.sendJSON(w, response, http.StatusOK)
+}
+
+func (h *Handler) ConfirmMediaUpload(w http.ResponseWriter, r *http.Request) {
+	id, err := h.getUrlParamUuid(r, "id")
+	if err != nil {
+		boom.BadRequest(w, err)
+		return
+	}
+
+	var req ConfirmMediaUploadRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		boom.BadRequest(w, "неверный формат JSON")
 		return
@@ -202,13 +220,13 @@ func (h *Handler) UploadMedia(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response, err := h.service.SaveMedia(r.Context(), &req, *taskID)
+	response, err := h.service.ConfirmMediaUpload(r.Context(), &req, *id)
 	if err != nil {
 		boom.Internal(w, err)
 		return
 	}
 
-	h.sendJSON(w, response, http.StatusOK)
+	h.sendJSON(w, response, http.StatusCreated)
 }
 
 func (h *Handler) RemoveMedia(w http.ResponseWriter, r *http.Request) {

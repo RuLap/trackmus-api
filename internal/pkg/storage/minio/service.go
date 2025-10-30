@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/url"
 	"time"
 
 	"github.com/minio/minio-go/v7"
@@ -82,4 +83,61 @@ func (s *Service) CreatePresignedURL(ctx context.Context, bucketName, objName st
 	}
 
 	return url.String(), nil
+}
+
+func (s *Service) FileExists(ctx context.Context, bucketName, objName string) (bool, error) {
+	_, err := s.client.GetClient().StatObject(ctx, bucketName, objName, minio.StatObjectOptions{})
+	if err != nil {
+		if minio.ToErrorResponse(err).Code == "NoSuchKey" {
+			return false, nil
+		}
+		return false, fmt.Errorf("failed to check file existence: %w", err)
+	}
+	return true, nil
+}
+
+func (s *Service) GenerateDownloadURL(ctx context.Context, bucketName, objName, filename string) (string, error) {
+	reqParams := make(url.Values)
+	reqParams.Set("response-content-disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
+
+	url, err := s.client.GetClient().PresignedGetObject(ctx, bucketName, objName, 15*time.Minute, reqParams)
+	if err != nil {
+		return "", fmt.Errorf("failed to create download URL: %w", err)
+	}
+
+	return url.String(), nil
+}
+
+func (s *Service) GenerateUploadURL(ctx context.Context, bucketName, objName string) (string, error) {
+	url, err := s.client.GetClient().PresignedPutObject(ctx, bucketName, objName, 15*time.Minute)
+	if err != nil {
+		return "", fmt.Errorf("failed to create upload URL: %w", err)
+	}
+
+	return url.String(), nil
+}
+
+func (s *Service) ListObjects(ctx context.Context, bucketName, prefix string) ([]minio.ObjectInfo, error) {
+	var objects []minio.ObjectInfo
+
+	for obj := range s.client.GetClient().ListObjects(ctx, bucketName, minio.ListObjectsOptions{
+		Prefix:    prefix,
+		Recursive: true,
+	}) {
+		if obj.Err != nil {
+			return nil, fmt.Errorf("failed to list objects: %w", obj.Err)
+		}
+		objects = append(objects, obj)
+	}
+
+	return objects, nil
+}
+
+func (s *Service) GetFileInfo(ctx context.Context, bucketName, objName string) (minio.ObjectInfo, error) {
+	info, err := s.client.GetClient().StatObject(ctx, bucketName, objName, minio.StatObjectOptions{})
+	if err != nil {
+		return minio.ObjectInfo{}, fmt.Errorf("failed to get file info: %w", err)
+	}
+
+	return info, nil
 }

@@ -63,7 +63,7 @@ func (c *Client) PublishEvent(event events.Event) error {
 	err = c.channel.PublishWithContext(
 		ctx,
 		"",
-		"events", // общая очередь
+		"events",
 		false,
 		false,
 		amqp.Publishing{

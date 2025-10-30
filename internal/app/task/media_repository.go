@@ -10,8 +10,10 @@ import (
 
 type MediaRepository interface {
 	GetByTaskID(ctx context.Context, taskID uuid.UUID) ([]Media, error)
+	GetByID(ctx context.Context, id uuid.UUID) (*Media, error)
 	Create(ctx context.Context, model *Media) (*Media, error)
 	Delete(ctx context.Context, id uuid.UUID) error
+	DeleteByIDs(ctx context.Context, ids []uuid.UUID) error
 }
 
 type mediaRepository struct {
@@ -56,6 +58,33 @@ func (r *mediaRepository) GetByTaskID(ctx context.Context, taskID uuid.UUID) ([]
 	return medias, nil
 }
 
+func (r *mediaRepository) GetByID(ctx context.Context, id uuid.UUID) (*Media, error) {
+	query := `
+		SELECT id, type, filename, url, size, duration, created_at
+		FROM media
+		WHERE id = $1
+	`
+
+	var media Media
+	err := r.pool.QueryRow(
+		ctx,
+		query,
+		id,
+	).Scan(
+		&media.ID,
+		&media.Type,
+		&media.Filename,
+		&media.Size,
+		&media.Duration,
+		&media.CreatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to scan media: %w", err)
+	}
+
+	return &media, nil
+}
+
 func (r *mediaRepository) Create(ctx context.Context, model *Media) (*Media, error) {
 	query := `
 		INSERT INTO media(type, filename, url, size, duration)
@@ -90,6 +119,20 @@ func (r *mediaRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	`
 
 	_, err := r.pool.Exec(ctx, query, id)
+	if err != nil {
+		return fmt.Errorf("failed to delete media: %w", err)
+	}
+
+	return nil
+}
+
+func (r *mediaRepository) DeleteByIDs(ctx context.Context, ids []uuid.UUID) error {
+	query := `
+		DELETE FROM media
+		WHERE id = ANY($1::uuid[])
+	`
+
+	_, err := r.pool.Exec(ctx, query, ids)
 	if err != nil {
 		return fmt.Errorf("failed to delete media: %w", err)
 	}

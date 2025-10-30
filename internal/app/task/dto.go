@@ -56,10 +56,14 @@ type GetMediaResponse struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
-type SaveMediaRequest struct {
+type GetUploadURLResponse struct {
+	MediaID string
+	URL     string
+}
+
+type ConfirmMediaUploadRequest struct {
 	Type     MediaType `json:"type" validate:"required"`
 	Filename string    `json:"filename" validate:"required,min=1"`
-	URL      string    `json:"url" validate:"required,url"`
 	Size     int64     `json:"size" validate:"required,number"`
 	Duration int       `json:"duration" validate:"required,number"`
 }
@@ -74,7 +78,6 @@ type GetLinkResponse struct {
 }
 
 type SaveLinkRequest struct {
-	URL   string   `json:"url" validate:"required,url"`
 	Title string   `json:"title" validate:"required,min=1,max=50"`
 	Type  LinkType `json:"type" validate:"required,min=1,max=50"`
 }
