@@ -6,8 +6,8 @@ import (
 	"github.com/RuLap/trackmus-api/internal/pkg/config"
 	"github.com/RuLap/trackmus-api/internal/pkg/jwthelper"
 	"github.com/RuLap/trackmus-api/internal/pkg/rabbitmq"
+	"github.com/RuLap/trackmus-api/internal/pkg/redis"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/redis/go-redis/v9"
 )
 
 type Module struct {
@@ -21,8 +21,8 @@ func NewModule(
 	pool *pgxpool.Pool,
 	jwtHelper *jwthelper.JWTHelper,
 	googleCfg *config.GoogleOAuth,
-	redis *redis.Client,
-	rabbitmq *rabbitmq.Client,
+	redis *redis.Service,
+	rabbitmq *rabbitmq.Service,
 ) *Module {
 	googleConfig := &GoogleOAuthConfig{
 		ClientID:     googleCfg.ClientID,

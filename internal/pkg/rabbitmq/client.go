@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/RuLap/trackmus-api/internal/pkg/config"
 	"github.com/RuLap/trackmus-api/internal/pkg/events"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -17,8 +18,8 @@ type Client struct {
 	log     *slog.Logger
 }
 
-func NewClient(url string, log *slog.Logger) (*Client, error) {
-	conn, err := amqp.Dial(url)
+func NewClient(cfg *config.RabbitMQConfig, log *slog.Logger) (*Client, error) {
+	conn, err := amqp.Dial(cfg.URL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to RabbitMQ: %w", err)
 	}
@@ -30,7 +31,7 @@ func NewClient(url string, log *slog.Logger) (*Client, error) {
 	}
 
 	_, err = channel.QueueDeclare(
-		"email_events",
+		"events",
 		true,
 		false,
 		false,
@@ -50,7 +51,7 @@ func NewClient(url string, log *slog.Logger) (*Client, error) {
 	}, nil
 }
 
-func (c *Client) PublishEmailEvent(event events.EmailEvent) error {
+func (c *Client) PublishEvent(event events.Event) error {
 	body, err := json.Marshal(event)
 	if err != nil {
 		return fmt.Errorf("failed to marshal event: %w", err)
@@ -62,26 +63,31 @@ func (c *Client) PublishEmailEvent(event events.EmailEvent) error {
 	err = c.channel.PublishWithContext(
 		ctx,
 		"",
-		"email_events",
+		"events", // общая очередь
 		false,
 		false,
 		amqp.Publishing{
 			ContentType:  "application/json",
 			Body:         body,
 			DeliveryMode: amqp.Persistent,
+			Type:         event.GetType(),
 		},
 	)
 	if err != nil {
 		return fmt.Errorf("failed to publish event: %w", err)
 	}
 
-	c.log.Debug("email event published", "to", event.To, "template", event.Template)
+	c.log.Debug("event published", "type", event.GetType())
 	return nil
 }
 
-func (c *Client) ConsumeEmailEvents(ctx context.Context, handler func(events.EmailEvent) error) error {
+func (c *Client) PublishEmailEvent(event events.EmailEvent) error {
+	return c.PublishEvent(event)
+}
+
+func (c *Client) ConsumeEvents(ctx context.Context, handler func(eventType string, body []byte) error) error {
 	msgs, err := c.channel.Consume(
-		"email_events",
+		"events",
 		"",
 		false,
 		false,
@@ -93,44 +99,44 @@ func (c *Client) ConsumeEmailEvents(ctx context.Context, handler func(events.Ema
 		return fmt.Errorf("failed to consume messages: %w", err)
 	}
 
-	c.log.Info("started consuming email events")
+	c.log.Info("started consuming events")
 
 	for {
 		select {
 		case <-ctx.Done():
-			c.log.Info("stopping email events consumer")
+			c.log.Info("stopping events consumer")
 			return nil
 		case msg, ok := <-msgs:
 			if !ok {
-				c.log.Warn("email events channel closed")
+				c.log.Warn("events channel closed")
 				return nil
 			}
 
-			var event events.EmailEvent
-			if err := json.Unmarshal(msg.Body, &event); err != nil {
-				c.log.Error("failed to unmarshal email event", "error", err)
-				msg.Nack(false, false)
-				continue
-			}
-
-			if err := handler(event); err != nil {
-				c.log.Error("failed to handle email event",
-					"error", err,
-					"template", event.Template,
-					"to", event.To,
-				)
+			if err := handler(msg.Type, msg.Body); err != nil {
+				c.log.Error("failed to handle event", "type", msg.Type, "error", err)
 				msg.Nack(false, true)
 			} else {
 				msg.Ack(false)
-				c.log.Debug("email event processed successfully",
-					"template", event.Template,
-					"to", event.To,
-				)
+				c.log.Debug("event processed", "type", msg.Type)
 			}
 		}
 	}
 }
 
+func (c *Client) ConsumeEmailEvents(ctx context.Context, handler func(events.EmailEvent) error) error {
+	return c.ConsumeEvents(ctx, func(eventType string, body []byte) error {
+		if eventType != "email" {
+			return nil
+		}
+
+		var event events.EmailEvent
+		if err := json.Unmarshal(body, &event); err != nil {
+			return fmt.Errorf("failed to unmarshal email event: %w", err)
+		}
+
+		return handler(event)
+	})
+}
 func (c *Client) Close() error {
 	if c.channel != nil {
 		if err := c.channel.Close(); err != nil {

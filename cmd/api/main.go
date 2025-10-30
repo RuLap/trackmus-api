@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"log/slog"
 	"time"
 
 	"github.com/RuLap/trackmus-api/internal/app/auth"
@@ -14,12 +13,13 @@ import (
 	"github.com/RuLap/trackmus-api/internal/pkg/logger"
 	"github.com/RuLap/trackmus-api/internal/pkg/middleware"
 	"github.com/RuLap/trackmus-api/internal/pkg/rabbitmq"
+	"github.com/RuLap/trackmus-api/internal/pkg/redis"
 	"github.com/RuLap/trackmus-api/internal/pkg/server"
 	postgres "github.com/RuLap/trackmus-api/internal/pkg/storage"
+	"github.com/RuLap/trackmus-api/internal/pkg/storage/minio"
 	validation "github.com/RuLap/trackmus-api/internal/pkg/validator"
 	"github.com/go-chi/chi/v5"
 	chi_middleware "github.com/go-chi/chi/v5/middleware"
-	"github.com/redis/go-redis/v9"
 )
 
 func main() {
@@ -36,12 +36,26 @@ func main() {
 	validation.Init()
 
 	//Additional Services-----------------------------------------------------------------------------------------------
+	redisClient, err := redis.NewClient(cfg.Redis, logger)
+	if err != nil {
+		logger.Error("failed to connect to Redis", "error", err)
+		return
+	}
+	logger.Info("init redis client successfully")
 
-	redisClient := initRedis(logger, &cfg.Redis)
-	logger.Info("init redis successfully")
+	redisService := redis.NewService(redisClient)
+	logger.Info("init redis service successfully")
 
-	rabbitmqClient := initRabbitMQ(logger, &cfg.RabbitMQ)
-	logger.Info("init rabbitmq successfully")
+	mqClient, err := rabbitmq.NewClient(&cfg.RabbitMQ, logger)
+	if err != nil {
+		logger.Error("failed to connect to RabbitMQ", "error", err)
+		return
+	}
+	defer mqClient.Close()
+	logger.Info("init rabbitmq client successfully")
+
+	mqService := rabbitmq.NewService(mqClient)
+	logger.Info("init rabbitmq service successfully")
 
 	storage, err := postgres.InitDB(cfg.PostgresConnString)
 	if err != nil {
@@ -55,16 +69,23 @@ func main() {
 		return
 	}
 
+	minioClient, err := minio.New(&cfg.MinioConfig)
+	if err != nil {
+		logger.Error("failed to init MinIO: %w", err)
+	}
+
+	minioService := minio.NewService(minioClient)
+
 	//Modules----------------------------------------------------------------------------------------------------------
 
-	authModule := auth.NewModule(logger, storage.Database(), jwtHelper, &cfg.GoogleOAuth, redisClient, rabbitmqClient)
-	taskModule := task.NewModule(logger, storage.Database(), redisClient, rabbitmqClient)
+	authModule := auth.NewModule(logger, storage.Database(), jwtHelper, &cfg.GoogleOAuth, redisService, mqService)
+	taskModule := task.NewModule(logger, storage.Database(), minioService)
 
 	var mailService *mail_services.MailService
-	if rabbitmqClient != nil {
+	if mqService != nil {
 		mailService = mail_services.NewMailService(
 			logger,
-			rabbitmqClient,
+			mqService,
 			&cfg.SMTP,
 		)
 
@@ -144,41 +165,4 @@ func main() {
 
 	server.New(router, cfg.HTTPServer)
 	logger.Info("starting", "address", cfg.HTTPServer.Address)
-}
-
-func initRedis(logger *slog.Logger, cfg *config.RedisConfig) *redis.Client {
-	logger.Info("starting redis", "address", cfg.Address)
-	rdb := redis.NewClient(&redis.Options{
-		Addr:     cfg.Address,
-		Password: cfg.Password,
-		DB:       cfg.DB,
-	})
-
-	if err := rdb.Ping(context.Background()).Err(); err != nil {
-		logger.Error("failed to connect to redis", "error", err)
-	}
-
-	logger.Info("redis connected successfully")
-	return rdb
-}
-
-func initRabbitMQ(logger *slog.Logger, cfg *config.RabbitMQConfig) *rabbitmq.Client {
-	var rabbitmqClient *rabbitmq.Client
-	var err error
-
-	if cfg.URL != "" {
-		rabbitmqClient, err = rabbitmq.NewClient(cfg.URL, logger)
-		if err != nil {
-			logger.Error("failed to connect to RabbitMQ",
-				"error", err,
-				"url", cfg.URL,
-			)
-		} else {
-			logger.Info("successfully connected to RabbitMQ")
-		}
-	} else {
-		logger.Warn("RabbitMQ URL not configured - email notifications will be disabled")
-	}
-
-	return rabbitmqClient
 }

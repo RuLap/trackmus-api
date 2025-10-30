@@ -3,9 +3,8 @@ package task
 import (
 	"log/slog"
 
-	"github.com/RuLap/trackmus-api/internal/pkg/rabbitmq"
+	"github.com/RuLap/trackmus-api/internal/pkg/storage/minio"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/redis/go-redis/v9"
 )
 
 type Module struct {
@@ -17,13 +16,13 @@ type Module struct {
 	Handler     Handler
 }
 
-func NewModule(log *slog.Logger, pool *pgxpool.Pool, redis *redis.Client, rabbitmq *rabbitmq.Client) *Module {
+func NewModule(log *slog.Logger, pool *pgxpool.Pool, minio *minio.Service) *Module {
 	taskRepo := NewTaskRepository(pool)
 	sessionRepo := NewSessionRepository(pool)
 	mediaRepo := NewMediaRepository(pool)
 	linkRepo := NewLinkRepository(pool)
 
-	service := NewService(log, redis, rabbitmq, taskRepo, sessionRepo, mediaRepo, linkRepo)
+	service := NewService(log, minio, taskRepo, sessionRepo, mediaRepo, linkRepo)
 
 	handler := NewHandler(log, service)
 

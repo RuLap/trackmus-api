@@ -10,13 +10,12 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
-	"time"
 
 	"github.com/RuLap/trackmus-api/internal/pkg/events"
 	"github.com/RuLap/trackmus-api/internal/pkg/jwthelper"
 	"github.com/RuLap/trackmus-api/internal/pkg/rabbitmq"
+	"github.com/RuLap/trackmus-api/internal/pkg/redis"
 	"github.com/google/uuid"
-	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -42,8 +41,8 @@ type service struct {
 	log          *slog.Logger
 	jwtHelper    *jwthelper.JWTHelper
 	googleConfig *GoogleOAuthConfig
-	redis        *redis.Client
-	rabbitmq     *rabbitmq.Client
+	redis        *redis.Service
+	rabbitmq     *rabbitmq.Service
 	repo         Repository
 }
 
@@ -51,8 +50,8 @@ func NewService(
 	log *slog.Logger,
 	jwtHelper *jwthelper.JWTHelper,
 	googleConfig *GoogleOAuthConfig,
-	redis *redis.Client,
-	rabbitmq *rabbitmq.Client,
+	redis *redis.Service,
+	rabbitmq *rabbitmq.Service,
 	repo Repository,
 ) Service {
 	return &service{
@@ -72,14 +71,8 @@ func (s *service) SendConfirmationLink(ctx context.Context, req *SendConfirmatio
 
 	token := uuid.New().String()
 
-	userKey := fmt.Sprintf("email_confirm:user:%s", req.UserID)
-	tokenKey := fmt.Sprintf("email_confirm:token:%s", token)
-
-	pipe := s.redis.TxPipeline()
-	pipe.Set(ctx, userKey, token, 24*time.Hour)
-	pipe.Set(ctx, tokenKey, req.UserID, 24*time.Hour)
-
-	if _, err := pipe.Exec(ctx); err != nil {
+	err := s.redis.StoreEmailConfirmation(ctx, req.UserID, req.Email, token)
+	if err != nil {
 		s.log.Error("failed to store tokens in redis", "error", err, "user_id", req.UserID)
 		return fmt.Errorf("не удалось сохранить токен")
 	}
@@ -97,9 +90,11 @@ func (s *service) SendConfirmationLink(ctx context.Context, req *SendConfirmatio
 			},
 		}
 
-		if err := s.rabbitmq.PublishEmailEvent(event); err != nil {
+		if err := s.rabbitmq.PublishEmail(event); err != nil {
 			s.log.Error("failed to publish email event", "error", err)
 		}
+	} else {
+		s.log.Warn("event service not available - email not sent")
 	}
 
 	s.log.Info("confirmation link sent", "email", req.Email, "user_id", req.UserID)
@@ -111,8 +106,7 @@ func (s *service) ConfirmEmail(ctx context.Context, token string, currentUserID 
 		return fmt.Errorf("токен обязателен")
 	}
 
-	redisKey := fmt.Sprintf("email_confirm:token:%s", token)
-	tokenUserID, err := s.redis.Get(ctx, redisKey).Result()
+	tokenUserID, err := s.redis.GetEmailConfirmationUserID(ctx, token)
 	if err != nil {
 		s.log.Warn("invalid or expired confirmation token", "token", token, "error", err)
 		return fmt.Errorf("неверная или устаревшая ссылка подтверждения")
@@ -132,10 +126,8 @@ func (s *service) ConfirmEmail(ctx context.Context, token string, currentUserID 
 		return fmt.Errorf("не удалось подтвердить email")
 	}
 
-	pipe := s.redis.TxPipeline()
-	pipe.Del(ctx, redisKey)
-	pipe.Del(ctx, fmt.Sprintf("email_confirm:user:%s", currentUserID))
-	if _, err := pipe.Exec(ctx); err != nil {
+	err = s.redis.DeleteEmailConfirmation(ctx, currentUserID, token)
+	if err != nil {
 		s.log.Warn("failed to delete used tokens", "token", token, "error", err)
 	}
 
@@ -306,7 +298,7 @@ func (s *service) RefreshTokens(ctx context.Context, refreshToken string) (*Auth
 		return nil, fmt.Errorf("неверный тип токена")
 	}
 
-	storedToken, err := s.redis.Get(ctx, s.getRefreshTokenKey(claims.UserID)).Result()
+	storedToken, err := s.redis.GetRefreshToken(ctx, claims.UserID)
 	if err != nil {
 		s.log.Warn("refresh token not found in storage", "user_id", claims.UserID, "error", err)
 		return nil, fmt.Errorf("refresh token не найден или истек")
@@ -340,18 +332,8 @@ func (s *service) RefreshTokens(ctx context.Context, refreshToken string) (*Auth
 	}, nil
 }
 
-func (s *service) storeRefreshToken(ctx context.Context, userID, refreshToken string) error {
-	key := s.getRefreshTokenKey(userID)
-	return s.redis.Set(ctx, key, refreshToken, 7*24*time.Hour).Err()
-}
-
-func (s *service) getRefreshTokenKey(userID string) string {
-	return fmt.Sprintf("refresh_token:%s", userID)
-}
-
 func (s *service) Logout(ctx context.Context, userID string) error {
-	key := s.getRefreshTokenKey(userID)
-	err := s.redis.Del(ctx, key).Err()
+	err := s.redis.DeleteRefreshToken(ctx, userID)
 	if err != nil {
 		s.log.Error("failed to delete refresh token", "error", err, "user_id", userID)
 		return fmt.Errorf("не удалось выполнить выход")
@@ -392,6 +374,14 @@ func (s *service) ValidateToken(token string) (bool, error) {
 		return false, fmt.Errorf("неверный токен")
 	}
 	return valid, nil
+}
+
+func (s *service) storeRefreshToken(ctx context.Context, userID, refreshToken string) error {
+	return s.redis.StoreRefreshToken(ctx, userID, refreshToken)
+}
+
+func (s *service) getRefreshTokenKey(userID string) string {
+	return fmt.Sprintf("refresh_token:%s", userID)
 }
 
 func (s *service) exchangeCodeForToken(code string) (string, error) {

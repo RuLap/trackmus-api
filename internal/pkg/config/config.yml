@@ -28,7 +28,7 @@ redis:
 
 rabbitmq:
   url: "${RABBITMQ_URL}"
-  queue_name: "${CONFIRMATION_QUEUE}"
+  queue_name: "${RABBITMQ_QUEUE}"
 
 smtp:
   host: "${SMTP_HOST}"

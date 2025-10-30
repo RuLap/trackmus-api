@@ -13,11 +13,11 @@ import (
 
 type MailService struct {
 	log      *slog.Logger
-	rabbitmq *rabbitmq.Client
+	rabbitmq *rabbitmq.Service
 	mailer   *mailer.Mailer
 }
 
-func NewMailService(log *slog.Logger, rabbitmqClient *rabbitmq.Client, smtpConfig *config.SMTP) *MailService {
+func NewMailService(log *slog.Logger, mqService *rabbitmq.Service, smtpConfig *config.SMTP) *MailService {
 	mailer := mailer.NewMailer(
 		smtpConfig.Host,
 		smtpConfig.Port,
@@ -29,7 +29,7 @@ func NewMailService(log *slog.Logger, rabbitmqClient *rabbitmq.Client, smtpConfi
 
 	return &MailService{
 		log:      log,
-		rabbitmq: rabbitmqClient,
+		rabbitmq: mqService,
 		mailer:   mailer,
 	}
 }
