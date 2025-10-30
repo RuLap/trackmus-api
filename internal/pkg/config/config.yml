@@ -37,3 +37,9 @@ smtp:
   password: "${SMTP_PASSWORD}"
   from_name: "${SMTP_FROM_NAME}"
   from_address: "${SMTP_FROM_ADDRESS}"
+
+minio:
+  endpoint: "${MINIO_ENDPOINT}"
+  access_key: "${MINIO_ROOT_USER}"
+  secret_key: "${MINIO_ROOT_PASSWORD}"
+  use_ssl: "${MINIO_USE_SSL}"

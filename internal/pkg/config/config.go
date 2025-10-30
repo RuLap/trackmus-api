@@ -19,6 +19,7 @@ type Config struct {
 	SMTP               SMTP           `yaml:"smtp"`
 	Redis              RedisConfig    `yaml:"redis"`
 	RabbitMQ           RabbitMQConfig `yaml:"rabbitmq"`
+	MinioConfig        MinioConfig    `yaml:"minio"`
 }
 
 type HTTPServer struct {
@@ -62,6 +63,13 @@ type RedisConfig struct {
 type RabbitMQConfig struct {
 	URL       string `yaml:"url"`
 	QueueName string `yaml:"queue_name"`
+}
+
+type MinioConfig struct {
+	Endpoint  string `yaml:"endpoint"`
+	AccessKey string `yaml:"access_key"`
+	SecretKey string `yaml:"secret_key"`
+	UseSSL    bool   `yaml:"use_ssl"`
 }
 
 func MustLoad() *Config {
