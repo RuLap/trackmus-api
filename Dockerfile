@@ -7,9 +7,9 @@ RUN go mod download
 
 COPY . .
 
-RUN go build -o trackmus-api cmd/api/main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -o /app/trackmus-api ./cmd/api/main.go
 
-RUN go install github.com/pressly/goose/v3/cmd/goose@latest
+RUN CGO_ENABLED=0 GOOS=linux go install github.com/pressly/goose/v3/cmd/goose@latest
 
 FROM alpine:latest
 RUN apk --no-cache add ca-certificates postgresql-client
@@ -20,6 +20,8 @@ COPY --from=build /app/trackmus-api .
 COPY --from=build /go/bin/goose /usr/local/bin/goose
 COPY internal/pkg/config/config.yaml ./config/config.yaml
 COPY migrations/ ./migrations/
+
+RUN chmod +x /app/trackmus-api
 
 EXPOSE 8080
 

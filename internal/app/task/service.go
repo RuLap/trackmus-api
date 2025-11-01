@@ -247,6 +247,7 @@ func (s *service) GetMediaUploadURL(ctx context.Context, taskID, mediaID uuid.UU
 	url, err := s.minio.GenerateUploadURL(ctx, s.bucketName, s3Key)
 	if err != nil {
 		s.log.Error("failed to generate upload url", "objName", s3Key)
+		return nil, fmt.Errorf(errors.ErrFailedToSaveData)
 	}
 
 	return &GetUploadURLResponse{

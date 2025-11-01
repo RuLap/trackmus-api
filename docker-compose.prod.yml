@@ -2,8 +2,9 @@ version: "3.8"
 
 services:
   trackmus_api:
-    build: .
-    dockerfile: ./Dockerfile
+    build:
+      context: .
+      dockerfile: ./Dockerfile
     container_name: trackmus_api_prod
     environment:
       - JWT_SECRET=${JWT_SECRET}
@@ -49,12 +50,12 @@ services:
     ports:
       - "5432:5432"
     networks:
-      trackmus_network_prod
+      - trackmus_network_prod
     volumes:
       - trackmus_pg_data_prod:/var/lib/postgresql/data
       - ./init-postgres.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
-      test: [ "CMD_SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
       interval: 5s
       timeout: 5s
       retries: 5

@@ -42,4 +42,4 @@ minio:
   endpoint: "${MINIO_ENDPOINT}"
   access_key: "${MINIO_ROOT_USER}"
   secret_key: "${MINIO_ROOT_PASSWORD}"
-  use_ssl: "${MINIO_USE_SSL}"
+  use_ssl: ${MINIO_USE_SSL}

@@ -30,7 +30,7 @@ func (h *Handler) GetActiveTasks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response, err := h.service.GetActiveTasks(r.Context(), userID)
+	response, err := h.service.GetActiveTasks(r.Context(), *userID)
 	if err != nil {
 		boom.Internal(w, err)
 		return
@@ -46,7 +46,7 @@ func (h *Handler) GetCompletedTasks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response, err := h.service.GetCompletedTasks(r.Context(), userID)
+	response, err := h.service.GetCompletedTasks(r.Context(), *userID)
 	if err != nil {
 		boom.Internal(w, err)
 		return
@@ -89,7 +89,7 @@ func (h *Handler) CreateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response, err := h.service.CreateTask(r.Context(), &req, userID)
+	response, err := h.service.CreateTask(r.Context(), &req, *userID)
 	if err != nil {
 		boom.Internal(w, err)
 		return
@@ -312,12 +312,18 @@ func (h *Handler) sendJSON(w http.ResponseWriter, data interface{}, statusCode i
 	json.NewEncoder(w).Encode(data)
 }
 
-func (h *Handler) getUserIDFromContext(ctx context.Context) (uuid.UUID, error) {
+func (h *Handler) getUserIDFromContext(ctx context.Context) (*uuid.UUID, error) {
 	userIDStr, ok := ctx.Value("userID").(string)
 	if !ok {
-		h.log.Error("Incorrect ID in URL", "error", errors.ErrCommon)
-		return uuid.Nil, fmt.Errorf(errors.ErrCommon)
+		h.log.Error("Incorrect ID in context", "userID", userIDStr)
+		return nil, fmt.Errorf(errors.ErrCommon)
 	}
 
-	return uuid.Parse(userIDStr)
+	id, err := uuid.Parse(userIDStr)
+	if err != nil {
+		h.log.Error("failed to parse userID from context", "userID", userIDStr, "error", err)
+		return nil, fmt.Errorf(errors.ErrCommon)
+	}
+
+	return &id, nil
 }

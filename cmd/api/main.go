@@ -1,4 +1,4 @@
-package api
+package main
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"github.com/RuLap/trackmus-api/internal/app/auth"
 	mail_services "github.com/RuLap/trackmus-api/internal/app/mail/services"
 	"github.com/RuLap/trackmus-api/internal/app/task"
+	"github.com/RuLap/trackmus-api/internal/app/user"
 	"github.com/RuLap/trackmus-api/internal/pkg/config"
 	"github.com/RuLap/trackmus-api/internal/pkg/http"
 	"github.com/RuLap/trackmus-api/internal/pkg/jwthelper"
@@ -79,6 +80,7 @@ func main() {
 	//Modules----------------------------------------------------------------------------------------------------------
 
 	authModule := auth.NewModule(logger, storage.Database(), jwtHelper, &cfg.GoogleOAuth, redisService, mqService)
+	userModule := user.NewModule(logger, storage.Database(), minioService)
 	taskModule := task.NewModule(logger, storage.Database(), minioService)
 
 	var mailService *mail_services.MailService
@@ -129,6 +131,14 @@ func main() {
 		r.With(middleware.AuthMiddleware(jwtHelper)).Post("/logout", authModule.Handler.Logout)
 	})
 
+	router.Route("/users", func(r chi.Router) {
+		r.Use(middleware.AuthMiddleware(jwtHelper))
+
+		r.Get("/{id}", userModule.Handler.GetUserByID)
+		r.Get("/avatar/upload-url", userModule.Handler.GetAvatarUploadURL)
+		r.Post("/avatar", userModule.Handler.ConfirmAvatarUpload)
+	})
+
 	router.Route("/tasks", func(r chi.Router) {
 		r.Use(middleware.AuthMiddleware(jwtHelper))
 
@@ -136,9 +146,9 @@ func main() {
 		r.Get("/completed", taskModule.Handler.GetCompletedTasks)
 		r.Get("/{id}", taskModule.Handler.GetTaskByID)
 		r.Post("/", taskModule.Handler.CreateTask)
-		r.Put("/", taskModule.Handler.UpdateTask)
 		r.Put("/{id}/complete", taskModule.Handler.CompleteTask)
-		r.Get("{task_id}/media/upload-url", taskModule.Handler.GetMediaUploadURL)
+		r.Put("/{id}", taskModule.Handler.UpdateTask)
+		r.Get("/{task_id}/media/upload-url", taskModule.Handler.GetMediaUploadURL)
 	})
 
 	router.Route("/sessions", func(r chi.Router) {
@@ -152,18 +162,22 @@ func main() {
 		r.Use(middleware.AuthMiddleware(jwtHelper))
 
 		r.Post("/{id}", taskModule.Handler.ConfirmMediaUpload)
-		r.Delete("/", taskModule.Handler.RemoveMedia)
+		r.Delete("/{id}", taskModule.Handler.RemoveMedia)
 	})
 
 	router.Route("/links", func(r chi.Router) {
 		r.Use(middleware.AuthMiddleware(jwtHelper))
 
 		r.Post("/", taskModule.Handler.CreateLink)
-		r.Delete("/", taskModule.Handler.RemoveLink)
+		r.Delete("/{id}", taskModule.Handler.RemoveLink)
 	})
 
 	//Server-----------------------------------------------------------------------------------------------------------
 
-	server.New(router, cfg.HTTPServer)
+	srv := server.New(router, cfg.HTTPServer)
 	logger.Info("starting", "address", cfg.HTTPServer.Address)
+
+	if err := srv.Run(context.Background()); err != nil {
+		logger.Error("server stopped with error", "error", err)
+	}
 }

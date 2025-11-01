@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS "tasks" (
     "title" VARCHAR(50),
     "target_bpm" INT,
     "is_completed" BOOLEAN DEFAULT FALSE,
-    "created_at" TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    "created_at" TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 -- +goose StatementEnd
 
