@@ -34,8 +34,7 @@ type GoogleAuthRequest struct {
 }
 
 type SendConfirmationEmailRequest struct {
-	Email  string `json:"email" validate:"required,email"`
-	UserID string `json:"user_id" validate:"required,uuid"`
+	Email string `json:"email" validate:"required,email"`
 }
 
 type ConfirmEmailRequest struct {

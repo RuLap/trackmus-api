@@ -27,7 +27,7 @@ type Service interface {
 	RefreshTokens(ctx context.Context, refreshToken string) (*AuthResponse, error)
 	Logout(ctx context.Context, userID string) error
 
-	SendConfirmationLink(ctx context.Context, req *SendConfirmationEmailRequest) error
+	SendConfirmationLink(ctx context.Context, req *SendConfirmationEmailRequest, userID string) error
 	ConfirmEmail(ctx context.Context, token string, currentUserID string) error
 }
 
@@ -64,16 +64,16 @@ func NewService(
 	}
 }
 
-func (s *service) SendConfirmationLink(ctx context.Context, req *SendConfirmationEmailRequest) error {
-	if req.UserID == "" || req.Email == "" {
+func (s *service) SendConfirmationLink(ctx context.Context, req *SendConfirmationEmailRequest, userID string) error {
+	if userID == "" || req.Email == "" {
 		return fmt.Errorf("userID и email обязательны")
 	}
 
 	token := uuid.New().String()
 
-	err := s.redis.StoreEmailConfirmation(ctx, req.UserID, req.Email, token)
+	err := s.redis.StoreEmailConfirmation(ctx, userID, req.Email, token)
 	if err != nil {
-		s.log.Error("failed to store tokens in redis", "error", err, "user_id", req.UserID)
+		s.log.Error("failed to store tokens in redis", "error", err, "user_id", userID)
 		return fmt.Errorf("не удалось сохранить токен")
 	}
 
@@ -97,7 +97,7 @@ func (s *service) SendConfirmationLink(ctx context.Context, req *SendConfirmatio
 		s.log.Warn("event service not available - email not sent")
 	}
 
-	s.log.Info("confirmation link sent", "email", req.Email, "user_id", req.UserID)
+	s.log.Info("confirmation link sent", "email", req.Email, "user_id", userID)
 	return nil
 }
 

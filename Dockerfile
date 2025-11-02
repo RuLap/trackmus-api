@@ -20,6 +20,7 @@ COPY --from=build /app/trackmus-api .
 COPY --from=build /go/bin/goose /usr/local/bin/goose
 COPY internal/pkg/config/config.yaml ./config/config.yaml
 COPY migrations/ ./migrations/
+COPY internal/app/mail/mailer/templates/ ./internal/app/mail/mailer/templates/
 
 RUN chmod +x /app/trackmus-api
 

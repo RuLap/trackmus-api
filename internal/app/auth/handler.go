@@ -108,7 +108,7 @@ func (h *Handler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) SendConfirmationLink(w http.ResponseWriter, r *http.Request) {
-	var req ConfirmEmailRequest
+	var req SendConfirmationEmailRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		boom.BadRequest(w, "неверный формат JSON")
 		return
@@ -125,14 +125,14 @@ func (h *Handler) SendConfirmationLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.service.ConfirmEmail(r.Context(), req.Token, userID); err != nil {
+	if err := h.service.SendConfirmationLink(r.Context(), &req, userID); err != nil {
 		boom.BadRequest(w, err.Error())
 		return
 	}
 
 	h.sendJSON(w, map[string]interface{}{
 		"success": true,
-		"message": "Email успешно подтвержден",
+		"message": "Ссылка отправлена на Email",
 	}, http.StatusOK)
 }
 
