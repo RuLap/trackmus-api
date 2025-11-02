@@ -38,7 +38,7 @@ type SendConfirmationEmailRequest struct {
 }
 
 type ConfirmEmailRequest struct {
-	Token string `json:"token" validate:"required,uuid4"`
+	Token string `json:"token" validate:"required"`
 }
 
 type RefreshTokenRequest struct {
