@@ -3,7 +3,9 @@ package auth
 import (
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -69,11 +71,19 @@ func (s *service) SendConfirmationLink(ctx context.Context, req *SendConfirmatio
 		return fmt.Errorf("userID и email обязательны")
 	}
 
-	token := uuid.New().String()
+	rawToken := make([]byte, 32)
+	if _, err := rand.Read(rawToken); err != nil {
+		s.log.Error("failed to generate token", "error", err)
+		return fmt.Errorf("не удалось сгенерировать токен")
+	}
+	token := hex.EncodeToString(rawToken)
 
-	err := s.redis.StoreEmailConfirmation(ctx, userID, req.Email, token)
+	hash := sha256.Sum256([]byte(token))
+	tokenHash := hex.EncodeToString(hash[:])
+
+	err := s.redis.StoreEmailConfirmation(ctx, userID, req.Email, tokenHash)
 	if err != nil {
-		s.log.Error("failed to store tokens in redis", "error", err, "user_id", userID)
+		s.log.Error("failed to store token in redis", "error", err, "user_id", userID)
 		return fmt.Errorf("не удалось сохранить токен")
 	}
 
@@ -97,7 +107,7 @@ func (s *service) SendConfirmationLink(ctx context.Context, req *SendConfirmatio
 		s.log.Warn("event service not available - email not sent")
 	}
 
-	s.log.Info("confirmation link sent", "email", req.Email, "user_id", userID)
+	s.log.Info("confirmation link generated and sent", "email", req.Email, "user_id", userID)
 	return nil
 }
 
@@ -106,7 +116,10 @@ func (s *service) ConfirmEmail(ctx context.Context, token string, currentUserID 
 		return fmt.Errorf("токен обязателен")
 	}
 
-	tokenUserID, err := s.redis.GetEmailConfirmationUserID(ctx, token)
+	hash := sha256.Sum256([]byte(token))
+	tokenHash := hex.EncodeToString(hash[:])
+
+	tokenUserID, err := s.redis.GetEmailConfirmationUserID(ctx, tokenHash)
 	if err != nil {
 		s.log.Warn("invalid or expired confirmation token", "token", token, "error", err)
 		return fmt.Errorf("неверная или устаревшая ссылка подтверждения")
@@ -116,7 +129,6 @@ func (s *service) ConfirmEmail(ctx context.Context, token string, currentUserID 
 		s.log.Warn("security alert: token user mismatch",
 			"token_user", tokenUserID,
 			"current_user", currentUserID,
-			"token", token,
 		)
 		return fmt.Errorf("токен не принадлежит текущему пользователю")
 	}
@@ -126,9 +138,8 @@ func (s *service) ConfirmEmail(ctx context.Context, token string, currentUserID 
 		return fmt.Errorf("не удалось подтвердить email")
 	}
 
-	err = s.redis.DeleteEmailConfirmation(ctx, currentUserID, token)
-	if err != nil {
-		s.log.Warn("failed to delete used tokens", "token", token, "error", err)
+	if err := s.redis.DeleteEmailConfirmation(ctx, currentUserID, tokenHash); err != nil {
+		s.log.Warn("failed to delete used token", "token", token, "error", err)
 	}
 
 	s.log.Info("email confirmed successfully", "user_id", currentUserID)
