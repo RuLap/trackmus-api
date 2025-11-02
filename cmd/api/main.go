@@ -122,10 +122,9 @@ func main() {
 		r.Get("/google/callback", authModule.Handler.GoogleCallback)
 
 		r.Route("/email", func(r chi.Router) {
-			r.Use(middleware.AuthMiddleware(jwtHelper))
-
-			r.Post("/send-confirmation", authModule.Handler.SendConfirmationLink)
 			r.Post("/confirm", authModule.Handler.ConfirmEmail)
+			r.With(middleware.AuthMiddleware(jwtHelper)).
+				Post("/send-confirmation", authModule.Handler.SendConfirmationLink)
 		})
 
 		r.With(middleware.AuthMiddleware(jwtHelper)).Post("/logout", authModule.Handler.Logout)

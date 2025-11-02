@@ -3,7 +3,6 @@ package auth
 import (
 	"context"
 	"crypto/rand"
-	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
@@ -30,7 +29,7 @@ type Service interface {
 	Logout(ctx context.Context, userID string) error
 
 	SendConfirmationLink(ctx context.Context, req *SendConfirmationEmailRequest, userID string) error
-	ConfirmEmail(ctx context.Context, token string, currentUserID string) error
+	ConfirmEmail(ctx context.Context, token string) error
 }
 
 type GoogleOAuthConfig struct {
@@ -78,10 +77,7 @@ func (s *service) SendConfirmationLink(ctx context.Context, req *SendConfirmatio
 	}
 	token := hex.EncodeToString(rawToken)
 
-	hash := sha256.Sum256([]byte(token))
-	tokenHash := hex.EncodeToString(hash[:])
-
-	err := s.redis.StoreEmailConfirmation(ctx, userID, req.Email, tokenHash)
+	err := s.redis.StoreEmailConfirmation(ctx, userID, req.Email, token)
 	if err != nil {
 		s.log.Error("failed to store token in redis", "error", err, "user_id", userID)
 		return fmt.Errorf("не удалось сохранить токен")
@@ -111,38 +107,27 @@ func (s *service) SendConfirmationLink(ctx context.Context, req *SendConfirmatio
 	return nil
 }
 
-func (s *service) ConfirmEmail(ctx context.Context, token string, currentUserID string) error {
+func (s *service) ConfirmEmail(ctx context.Context, token string) error {
 	if token == "" {
 		return fmt.Errorf("токен обязателен")
 	}
 
-	hash := sha256.Sum256([]byte(token))
-	tokenHash := hex.EncodeToString(hash[:])
-
-	tokenUserID, err := s.redis.GetEmailConfirmationUserID(ctx, tokenHash)
+	userID, err := s.redis.GetEmailConfirmationUserID(ctx, token)
 	if err != nil {
 		s.log.Warn("invalid or expired confirmation token", "token", token, "error", err)
 		return fmt.Errorf("неверная или устаревшая ссылка подтверждения")
 	}
 
-	if tokenUserID != currentUserID {
-		s.log.Warn("security alert: token user mismatch",
-			"token_user", tokenUserID,
-			"current_user", currentUserID,
-		)
-		return fmt.Errorf("токен не принадлежит текущему пользователю")
-	}
-
-	if err := s.repo.MakeEmailConfirmed(ctx, currentUserID); err != nil {
-		s.log.Error("failed to confirm email in database", "error", err, "user_id", currentUserID)
+	if err := s.repo.MakeEmailConfirmed(ctx, userID); err != nil {
+		s.log.Error("failed to confirm email in database", "error", err, "user_id", userID)
 		return fmt.Errorf("не удалось подтвердить email")
 	}
 
-	if err := s.redis.DeleteEmailConfirmation(ctx, currentUserID, tokenHash); err != nil {
+	if err := s.redis.DeleteEmailConfirmation(ctx, userID, token); err != nil {
 		s.log.Warn("failed to delete used token", "token", token, "error", err)
 	}
 
-	s.log.Info("email confirmed successfully", "user_id", currentUserID)
+	s.log.Info("email confirmed successfully", "user_id", userID)
 	return nil
 }
 

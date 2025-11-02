@@ -148,13 +148,7 @@ func (h *Handler) ConfirmEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID, ok := r.Context().Value("user_id").(string)
-	if !ok {
-		boom.Unathorized(w, "требуется аутентификация")
-		return
-	}
-
-	if err := h.service.ConfirmEmail(r.Context(), req.Token, userID); err != nil {
+	if err := h.service.ConfirmEmail(r.Context(), req.Token); err != nil {
 		boom.BadRequest(w, err.Error())
 		return
 	}
