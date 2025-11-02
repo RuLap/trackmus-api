@@ -136,7 +136,7 @@ services:
       - ./loki:/etc/loki
       - ./loki-data:/loki
     command: -config.file=/etc/loki/config.yml
-    user: "10001:10001"
+    user: "root"
     networks:
       - trackmus_network_prod
 
@@ -161,7 +161,7 @@ services:
       - "3003:3003"
     environment:
       GF_SECURITY_ADMIN_PASSWORD: ${GF_SECURITY_ADMIN_PASSWORD}
-    user: "472:472"
+    user: "root"
     depends_on:
       - loki
     volumes:
