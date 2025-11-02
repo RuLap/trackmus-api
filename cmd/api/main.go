@@ -126,7 +126,7 @@ func main() {
 			r.With(middleware.AuthMiddleware(jwtHelper)).
 				Post("/send-confirmation", authModule.Handler.SendConfirmationLink)
 			r.With(middleware.AuthMiddleware(jwtHelper)).
-				Post("/confirmed", authModule.Handler.CheckEmailConfirmed)
+				Get("/confirmed", authModule.Handler.CheckEmailConfirmed)
 		})
 
 		r.With(middleware.AuthMiddleware(jwtHelper)).Post("/logout", authModule.Handler.Logout)
