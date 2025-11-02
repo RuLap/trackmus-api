@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	uuid "github.com/google/uuid"
 	"github.com/jackc/pgx"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -16,6 +17,7 @@ var (
 )
 
 type Repository interface {
+	GetByID(ctx context.Context, id uuid.UUID) (*User, error)
 	CreateUser(ctx context.Context, user *User) (*string, error)
 	MakeEmailConfirmed(ctx context.Context, userID string) error
 	GetByEmailProvider(ctx context.Context, email string, provider Provider) (*User, error)
@@ -29,6 +31,32 @@ type repository struct {
 
 func NewRepository(pool *pgxpool.Pool) Repository {
 	return &repository{pool}
+}
+
+func (r *repository) GetByID(ctx context.Context, id uuid.UUID) (*User, error) {
+	query := `
+		SELECT id, email, provider, provider_id, email_confirmed
+		FROM users
+		WHERE id = $1
+	`
+
+	var user User
+	err := r.pool.QueryRow(
+		ctx,
+		query,
+		id,
+	).Scan(
+		&user.ID,
+		&user.Email,
+		&user.Provider,
+		&user.ProviderID,
+		&user.EmailConfirmed,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("не удалось получить пользователя по email provider: %w", err)
+	}
+
+	return &user, nil
 }
 
 func (r *repository) CreateUser(ctx context.Context, user *User) (*string, error) {

@@ -6,6 +6,7 @@ import (
 
 	validation "github.com/RuLap/trackmus-api/internal/pkg/validator"
 	"github.com/darahayes/go-boom"
+	"github.com/google/uuid"
 )
 
 type Handler struct {
@@ -156,6 +157,29 @@ func (h *Handler) ConfirmEmail(w http.ResponseWriter, r *http.Request) {
 	h.sendJSON(w, map[string]interface{}{
 		"success": true,
 		"message": "Email успешно подтвержден",
+	}, http.StatusOK)
+}
+
+func (h *Handler) CheckEmailConfirmed(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value("user_id").(string)
+	if !ok {
+		boom.Unathorized(w, "требуется аутентификация")
+		return
+	}
+
+	userUid, err := uuid.Parse(userID)
+	if err != nil {
+		boom.BadRequest(w, "произошла ошибка")
+	}
+
+	isConfirmed, err := h.service.IsEmailConfirmed(r.Context(), userUid)
+	if err != nil {
+		boom.BadRequest(w, err.Error())
+		return
+	}
+
+	h.sendJSON(w, map[string]interface{}{
+		"confirmed": isConfirmed,
 	}, http.StatusOK)
 }
 

@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/RuLap/trackmus-api/internal/pkg/errors"
 	"github.com/RuLap/trackmus-api/internal/pkg/events"
 	"github.com/RuLap/trackmus-api/internal/pkg/jwthelper"
 	"github.com/RuLap/trackmus-api/internal/pkg/rabbitmq"
@@ -30,6 +31,7 @@ type Service interface {
 
 	SendConfirmationLink(ctx context.Context, req *SendConfirmationEmailRequest, userID string) error
 	ConfirmEmail(ctx context.Context, token string) error
+	IsEmailConfirmed(ctx context.Context, userID uuid.UUID) (bool, error)
 }
 
 type GoogleOAuthConfig struct {
@@ -129,6 +131,15 @@ func (s *service) ConfirmEmail(ctx context.Context, token string) error {
 
 	s.log.Info("email confirmed successfully", "user_id", userID)
 	return nil
+}
+
+func (s *service) IsEmailConfirmed(ctx context.Context, userID uuid.UUID) (bool, error) {
+	user, err := s.repo.GetByID(ctx, userID)
+	if err != nil {
+		return false, fmt.Errorf(errors.ErrFailedToLoadData)
+	}
+
+	return user.EmailConfirmed, nil
 }
 
 func (s *service) Register(ctx context.Context, req RegisterRequest) (*AuthResponse, error) {
