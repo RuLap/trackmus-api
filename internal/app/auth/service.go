@@ -87,7 +87,7 @@ func (s *service) SendConfirmationLink(ctx context.Context, req *SendConfirmatio
 		return fmt.Errorf("не удалось сохранить токен")
 	}
 
-	confirmationURL := fmt.Sprintf("https://trakcmus.ru/confirm?token=%s", token)
+	confirmationURL := fmt.Sprintf("https://trackmus.ru/confirm?token=%s", token)
 
 	if s.rabbitmq != nil {
 		event := events.EmailEvent{
