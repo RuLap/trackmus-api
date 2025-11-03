@@ -92,6 +92,7 @@ func (r *taskRepository) Create(ctx context.Context, task *Task, userID uuid.UUI
 	err := r.pool.QueryRow(
 		ctx,
 		query,
+		userID,
 		task.Title,
 		task.TargetBPM,
 	).Scan(
