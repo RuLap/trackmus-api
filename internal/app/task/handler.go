@@ -313,7 +313,7 @@ func (h *Handler) sendJSON(w http.ResponseWriter, data interface{}, statusCode i
 }
 
 func (h *Handler) getUserIDFromContext(ctx context.Context) (*uuid.UUID, error) {
-	userIDStr, ok := ctx.Value("userID").(string)
+	userIDStr, ok := ctx.Value("user_id").(string)
 	if !ok {
 		h.log.Error("Incorrect ID in context", "userID", userIDStr)
 		return nil, fmt.Errorf(errors.ErrCommon)
