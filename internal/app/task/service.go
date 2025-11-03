@@ -70,7 +70,7 @@ func (s *service) GetActiveTasks(ctx context.Context, userID uuid.UUID) ([]GetTa
 		return nil, fmt.Errorf(errors.ErrFailedToLoadData)
 	}
 
-	var result []GetTaskShortResponse
+	result := make([]GetTaskShortResponse, 0)
 	for _, task := range tasks {
 		progress, err := s.getTaskProgress(ctx, &task)
 		if err != nil {
@@ -95,7 +95,7 @@ func (s *service) GetCompletedTasks(ctx context.Context, userID uuid.UUID) ([]Ge
 		return nil, fmt.Errorf(errors.ErrFailedToLoadData)
 	}
 
-	var result []GetTaskShortResponse
+	result := make([]GetTaskShortResponse, 0)
 	for _, task := range tasks {
 		progress, err := s.getTaskProgress(ctx, &task)
 		if err != nil {
