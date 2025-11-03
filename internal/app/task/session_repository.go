@@ -11,7 +11,7 @@ import (
 type SessionRepository interface {
 	GetByTaskID(ctx context.Context, taskID uuid.UUID) ([]Session, error)
 	GetByID(ctx context.Context, id uuid.UUID) (*Session, error)
-	Create(ctx context.Context, session *Session) (*Session, error)
+	Create(ctx context.Context, session *Session, taskID uuid.UUID) (*Session, error)
 }
 
 type sessionRepository struct {
@@ -83,10 +83,10 @@ func (r *sessionRepository) GetByID(ctx context.Context, id uuid.UUID) (*Session
 	return &session, nil
 }
 
-func (r *sessionRepository) Create(ctx context.Context, session *Session) (*Session, error) {
+func (r *sessionRepository) Create(ctx context.Context, session *Session, taskID uuid.UUID) (*Session, error) {
 	query := `
-		INSERT INTO sessions(bpm, note, confidence, start_time, end_time)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO sessions(task_id, bpm, note, confidence, start_time, end_time)
+		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING id
 	`
 
@@ -94,6 +94,7 @@ func (r *sessionRepository) Create(ctx context.Context, session *Session) (*Sess
 	err := r.pool.QueryRow(
 		ctx,
 		query,
+		taskID,
 		session.BPM,
 		session.Note,
 		session.Confidence,

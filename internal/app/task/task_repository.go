@@ -11,7 +11,7 @@ import (
 type TaskRepository interface {
 	Get(ctx context.Context, userID uuid.UUID, isCompleted bool) ([]Task, error)
 	GetByID(ctx context.Context, id uuid.UUID) (*Task, error)
-	Create(ctx context.Context, task *Task) (*Task, error)
+	Create(ctx context.Context, task *Task, userID uuid.UUID) (*Task, error)
 	Update(ctx context.Context, task *Task) (*Task, error)
 }
 
@@ -81,10 +81,10 @@ func (r *taskRepository) GetByID(ctx context.Context, id uuid.UUID) (*Task, erro
 	return &task, nil
 }
 
-func (r *taskRepository) Create(ctx context.Context, task *Task) (*Task, error) {
+func (r *taskRepository) Create(ctx context.Context, task *Task, userID uuid.UUID) (*Task, error) {
 	query := `
-		INSERT INTO tasks(title, target_bpm)
-		VALUES ($1, $2)
+		INSERT INTO tasks(user_id, title, target_bpm)
+		VALUES ($1, $2, $3)
 		RETURNING id
 	`
 

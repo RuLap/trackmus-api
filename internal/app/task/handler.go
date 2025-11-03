@@ -158,7 +158,7 @@ func (h *Handler) GetSessionByID(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) CreateSession(w http.ResponseWriter, r *http.Request) {
-	taskID, err := h.getUrlParamUuid(r, "id")
+	taskID, err := h.getUrlParamUuid(r, "task_id")
 	if err != nil {
 		boom.BadRequest(w, err)
 		return
@@ -246,7 +246,7 @@ func (h *Handler) RemoveMedia(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) CreateLink(w http.ResponseWriter, r *http.Request) {
-	taskID, err := h.getUrlParamUuid(r, "id")
+	taskID, err := h.getUrlParamUuid(r, "task_id")
 	if err != nil {
 		boom.BadRequest(w, err)
 		return

@@ -150,13 +150,16 @@ func main() {
 		r.Put("/{id}/complete", taskModule.Handler.CompleteTask)
 		r.Put("/{id}", taskModule.Handler.UpdateTask)
 		r.Get("/{task_id}/media/upload-url", taskModule.Handler.GetMediaUploadURL)
+
+		r.Post("/{task_id}/sessions", taskModule.Handler.CreateSession)
+
+		r.Post("/{task_id}/links", taskModule.Handler.CreateLink)
 	})
 
 	router.Route("/sessions", func(r chi.Router) {
 		r.Use(middleware.AuthMiddleware(jwtHelper))
 
 		r.Get("/{id}", taskModule.Handler.GetSessionByID)
-		r.Post("/", taskModule.Handler.CreateSession)
 	})
 
 	router.Route("/media", func(r chi.Router) {
@@ -169,7 +172,6 @@ func main() {
 	router.Route("/links", func(r chi.Router) {
 		r.Use(middleware.AuthMiddleware(jwtHelper))
 
-		r.Post("/", taskModule.Handler.CreateLink)
 		r.Delete("/{id}", taskModule.Handler.RemoveLink)
 	})
 

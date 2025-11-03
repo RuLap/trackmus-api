@@ -139,7 +139,7 @@ func (s *service) GetTaskByID(ctx context.Context, id uuid.UUID) (*GetTaskRespon
 func (s *service) CreateTask(ctx context.Context, req *SaveTaskRequest, userID uuid.UUID) (*GetTaskShortResponse, error) {
 	model := SaveRequestToTask(req, userID)
 
-	task, err := s.taskRepo.Create(ctx, &model)
+	task, err := s.taskRepo.Create(ctx, &model, userID)
 	if err != nil {
 		s.log.Error("failed to create task from repository",
 			"req", req,
@@ -226,7 +226,7 @@ func (s *service) GetSessionByID(ctx context.Context, id uuid.UUID) (*GetSession
 func (s *service) CreateSession(ctx context.Context, req *SaveSessionRequest, taskID uuid.UUID) (*GetSessionResponse, error) {
 	model := SaveRequestToSession(req, taskID)
 
-	session, err := s.sessionRepo.Create(ctx, &model)
+	session, err := s.sessionRepo.Create(ctx, &model, taskID)
 	if err != nil {
 		s.log.Error("failed to create session in repository",
 			"req", req,
